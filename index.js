@@ -143,7 +143,8 @@ const startDate = Date.now();
     console.log(`Wrote tracks file in ${(writeTracksTime / 1000).toFixed(2)} seconds`);
     console.log(`Wrote scrobbles file in ${(writeScrobblesTime / 1000).toFixed(2)} seconds`);
 
-    console.log(`Done! Total minutes listened: ${(getTotalDuration() / 1000 / 60).toFixed()} (${scrobbles.length} scrobbles)`);
+    console.log();
+    require('./analyse');
 }).catch(err => {
     clearInterval(logInterval);
     clearInterval(saveInterval);
