@@ -128,7 +128,7 @@ const startDate = Date.now();
             });
         }
 
-        if (page < parseInt(attributes.totalPages, 10)) {
+        if (page < parseInt(attributes.totalPages, 10) && scrobbles.length < attributes.total) {
             // Get next page
             return getAllTracks(page + 1);
         }
