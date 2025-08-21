@@ -27,37 +27,8 @@ function analyseScrobbles(title, scrobbles) {
     const timePassed = Date.now() - new Date(0).setFullYear(new Date().getFullYear());
     console.log(`   Total time listened: ${Math.floor(timeListened / 1000 / 60 / 60 / 24)} day(s), ${Math.floor(timeListened / 1000 / 60 / 60)} hour(s), ${Math.floor(timeListened / 1000 / 60)} minute(s), ${Math.floor(timeListened / 1000)} second(s) - ${((timeListened / timePassed) * 100).toFixed(1)}% of ${new Date().getFullYear()} so far`);
 
-    let latestStreak = 0;
-    let latestStreakPreviousScrobbleDate;
-    for (const scrobble of scrobbles) {
-        const day = 1000 * 60 * 60 * 24;
-        const scrobbleDate = scrobble.dateScrobbled;
-        const dateDiff = latestStreakPreviousScrobbleDate - scrobbleDate;
-        
-        if (dateDiff && dateDiff > day) break; 
-
-        latestStreak += (dateDiff || 0) / day;
-        latestStreakPreviousScrobbleDate = scrobbleDate;
-    }
+    const { latestStreak, highestStreak } = getStreak(scrobbles);
     console.log(`   Latest scrobbling streak: ${Math.floor(latestStreak)} day(s)`);
-
-    let highestStreak = 0;
-    let currentStreak = 0;
-    let highestStreakPreviousScrobbleDate;
-    for (const scrobble of scrobbles) {
-        const day = 1000 * 60 * 60 * 24;
-        const scrobbleDate = scrobble.dateScrobbled;
-        const dateDiff = highestStreakPreviousScrobbleDate - scrobbleDate;
-        
-        if (dateDiff && dateDiff > day) {
-            currentStreak = 0;
-        } else {
-            currentStreak += (dateDiff || 0) / day;
-            if (currentStreak > highestStreak) highestStreak = currentStreak;
-        };
-        
-        highestStreakPreviousScrobbleDate = scrobbleDate;
-    }
     console.log(`   Highest scrobbling streak: ${Math.floor(highestStreak)} day(s)`);
 
     const firstScrobble = scrobbles.reduce((acc, obj) => obj.dateScrobbled < acc.dateScrobbled ? obj : acc);
@@ -82,4 +53,35 @@ function analyseScrobbles(title, scrobbles) {
     const mostScrobbledDateScrobbles = scrobbles.filter(scrobble => new Date(scrobble.dateScrobbled).toLocaleDateString() === mostScrobbledDate.toLocaleDateString()).length;
     const mostScrobbledMonthScrobbles = scrobbles.filter(scrobble => new Date(scrobble.dateScrobbled).getMonth() === mostScrobbledDate.getMonth()).length;
     console.log(`   Most scrobbled date: ${mostScrobbledDate.toLocaleDateString()} (${mostScrobbledDateScrobbles} scrobbles that day, ${mostScrobbledMonthScrobbles} scrobbles that month)`);
+}
+
+function getStreak(scrobbles) {
+    let currentStreak = 0;
+    let highestStreak = 0;
+    let latestStreak = 0;
+    let previousScrobbleDate;
+
+    for (const scrobble of scrobbles) {
+        const day = 1000 * 60 * 60 * 24;
+        const scrobbleDate = scrobble.dateScrobbled;
+        const dateDiff = previousScrobbleDate - scrobbleDate;
+        
+        if (dateDiff && dateDiff > day) {
+            // Streak broken
+            if (!latestStreak) latestStreak = currentStreak;
+            currentStreak = 0;
+        } else {
+            // Streak ongoing
+            currentStreak += (dateDiff || 0) / day;
+            if (currentStreak > highestStreak) highestStreak = currentStreak;
+        };
+        
+        previousScrobbleDate = scrobbleDate;
+    }
+    if (!latestStreak) latestStreak = currentStreak;
+    
+    return {
+        highestStreak,
+        latestStreak
+    };
 }
