@@ -1,7 +1,10 @@
 const fs = require('fs');
-const { setTimeout } = require('timers/promises');
 
 const config = require('./config.json');
+
+const debug = require('./utils/debug');
+const getRecentTracks = require('./utils/getRecentTracks');
+const getTrackInfo = require('./utils/getTrackInfo');
 
 const tracks = fs.existsSync(config.tracksPath) ? JSON.parse(fs.readFileSync(config.tracksPath)) : [];
 const scrobbles = fs.existsSync(config.scrobblesPath) ? JSON.parse(fs.readFileSync(config.scrobblesPath)) : [];
@@ -180,57 +183,4 @@ function saveData() {
         writeTracksTime: writeTracksEndDate - writeTracksStartDate,
         writeScrobblesTime: writeScrobblesEndDate - writeScrobblesStartDate
     };
-}
-
-async function lastFmApi(path = "/", params = { }) {
-    const urlSearchParams = new URLSearchParams({
-        ...params,
-        api_key: config.apiKey,
-        format: 'json'
-    });
-
-    return fetch(`${config.baseUrl}${path}?${urlSearchParams.toString()}`).then(async res => {
-        if (res.status !== 200) throw new Error(`Got status code ${res.status}: ${res.statusText}`);
-
-        const json = await res.json();
-        if (json.error) {
-            if (json.error === 29) {
-                // Rate limited
-                debug('Rate limited!');
-                await setTimeout(2000);
-                return getRecentTracks(user, page, limit);
-            } else {
-                throw new Error(`Got error code ${json.error}: ${json.message}`);
-            }
-        }
-        
-        return json;
-    });
-}
-
-function getRecentTracks(user, page = 1, limit = 200) {
-    // NOTE: currently scrobbling track is shown on all pages
-    return lastFmApi('/', { method: 'user.getrecenttracks', user, page, limit }).then(json => ({
-        recentTracks: json.recenttracks.track,
-        attributes: json.recenttracks['@attr']
-    }))
-}
-
-function getTrackInfo(mbid, trackTitle, artistName) {
-    const params = {
-        method: 'track.getInfo',
-        // autocorrect: 1
-    };
-    if (mbid) {
-        params.mbid = mbid;
-    } else {
-        params.track = trackTitle;
-        params.artist = artistName;
-    }
-
-    return lastFmApi('/', params).then(json => json.track);
-}
-
-function debug(...msg) {
-    if (config.debug) console.log('[DEBUG]', ...msg);
 }

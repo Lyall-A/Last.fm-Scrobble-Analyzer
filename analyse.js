@@ -1,13 +1,15 @@
 const fs = require('fs');
 
-if (!fs.existsSync('./tracks.json') || !fs.existsSync('./scrobbles.json')) return console.log('No scrobbles to analyse! Fetch scrobbles first');
+const getMostFrequent = require('./utils/getMostFrequent');
 
 const config = require('./config.json');
 
-const tracks = require('./tracks.json');
-const scrobbles = require('./scrobbles.json');
+if (!fs.existsSync('./tracks.json') || !fs.existsSync('./scrobbles.json')) return console.log('No scrobbles to analyse! Fetch scrobbles first');
 
-const years = [...new Set(scrobbles.map(i => new Date(i.dateScrobbled).getFullYear()))].reverse();
+const tracks = require('./tracks.json');
+const scrobbles = require('./scrobbles.json').sort((a, b) => b.dateScrobbled - a.dateScrobbled);
+
+const years = new Set(scrobbles.map(i => new Date(i.dateScrobbled).getFullYear()).sort((a, b) => a - b));
 
 years.forEach(year => {
     analyseScrobbles(year, scrobbles.filter(scrobble => new Date(scrobble.dateScrobbled).getFullYear() === year))
@@ -24,6 +26,39 @@ function analyseScrobbles(title, scrobbles) {
     const timeListened = scrobbles.reduce((acc, obj) => acc + (tracks.find(track => track.id === obj.trackId)?.duration || config.defaultDuration || 0), 0);
     const timePassed = Date.now() - new Date(0).setFullYear(new Date().getFullYear());
     console.log(`   Total time listened: ${Math.floor(timeListened / 1000 / 60 / 60 / 24)} day(s), ${Math.floor(timeListened / 1000 / 60 / 60)} hour(s), ${Math.floor(timeListened / 1000 / 60)} minute(s), ${Math.floor(timeListened / 1000)} second(s) - ${((timeListened / timePassed) * 100).toFixed(1)}% of ${new Date().getFullYear()} so far`);
+
+    let latestStreak = 0;
+    let latestStreakPreviousScrobbleDate;
+    for (const scrobble of scrobbles) {
+        const day = 1000 * 60 * 60 * 24;
+        const scrobbleDate = scrobble.dateScrobbled;
+        const dateDiff = latestStreakPreviousScrobbleDate - scrobbleDate;
+        
+        if (dateDiff && dateDiff > day) break; 
+
+        latestStreak += (dateDiff || 0) / day;
+        latestStreakPreviousScrobbleDate = scrobbleDate;
+    }
+    console.log(`   Latest scrobbling streak: ${Math.floor(latestStreak)} day(s)`);
+
+    let highestStreak = 0;
+    let currentStreak = 0;
+    let highestStreakPreviousScrobbleDate;
+    for (const scrobble of scrobbles) {
+        const day = 1000 * 60 * 60 * 24;
+        const scrobbleDate = scrobble.dateScrobbled;
+        const dateDiff = highestStreakPreviousScrobbleDate - scrobbleDate;
+        
+        if (dateDiff && dateDiff > day) {
+            currentStreak = 0;
+        } else {
+            currentStreak += (dateDiff || 0) / day;
+            if (currentStreak > highestStreak) highestStreak = currentStreak;
+        };
+        
+        highestStreakPreviousScrobbleDate = scrobbleDate;
+    }
+    console.log(`   Highest scrobbling streak: ${Math.floor(highestStreak)} day(s)`);
 
     const firstScrobble = scrobbles.reduce((acc, obj) => obj.dateScrobbled < acc.dateScrobbled ? obj : acc);
     console.log(`   First scrobble: ${new Date(firstScrobble.dateScrobbled).toLocaleString()}`);
@@ -47,25 +82,4 @@ function analyseScrobbles(title, scrobbles) {
     const mostScrobbledDateScrobbles = scrobbles.filter(scrobble => new Date(scrobble.dateScrobbled).toLocaleDateString() === mostScrobbledDate.toLocaleDateString()).length;
     const mostScrobbledMonthScrobbles = scrobbles.filter(scrobble => new Date(scrobble.dateScrobbled).getMonth() === mostScrobbledDate.getMonth()).length;
     console.log(`   Most scrobbled date: ${mostScrobbledDate.toLocaleDateString()} (${mostScrobbledDateScrobbles} scrobbles that day, ${mostScrobbledMonthScrobbles} scrobbles that month)`);
-}
-
-function getMostFrequent(arr, getValue) {
-    const counts = new Map();
-
-    let mostFrequentCount = 0;
-    let mostFrequentItem;
-
-    for (const item of arr) {
-        const value = getValue ? getValue(item) : item;
-        const count = (counts.get(value) || 0) + 1;
-        
-        counts.set(value, count);
-
-        if (count > mostFrequentCount) {
-            mostFrequentCount = count;
-            mostFrequentItem = item;
-        }
-    }
-
-    return mostFrequentItem;
 }
