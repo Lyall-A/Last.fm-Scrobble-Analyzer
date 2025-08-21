@@ -219,6 +219,7 @@ function getRecentTracks(user, page = 1, limit = 200) {
 function getTrackInfo(mbid, trackTitle, artistName) {
     const params = {
         method: 'track.getInfo',
+        // autocorrect: 1
     };
     if (mbid) {
         params.mbid = mbid;

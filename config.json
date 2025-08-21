@@ -2,7 +2,7 @@
     "username": "",
     "baseUrl": "https://ws.audioscrobbler.com/2.0",
     "defaultDuration": 120000,
-    "logInterval": 10000,
+    "logInterval": 5000,
     "saveInterval": 300000,
     "tracksPath": "tracks.json",
     "scrobblesPath": "scrobbles.json",

@@ -1,3 +1,7 @@
+const fs = require('fs');
+
+if (!fs.existsSync('./tracks.json') || !fs.existsSync('./scrobbles.json')) return console.log('No scrobbles to analyse! Fetch scrobbles first');
+
 const config = require('./config.json');
 
 const tracks = require('./tracks.json');
@@ -14,9 +18,12 @@ function analyseScrobbles(title, scrobbles) {
     console.log(`${title}:`);
     console.log(`   Scrobbles: ${scrobbles.length}`);
 
+    const missingTracks = scrobbles.filter(scrobble => !scrobble.trackId);
+    console.log(`   Scrobbles without tracks: ${missingTracks.length}, around ${Math.floor((config.defaultDuration * missingTracks.length) / 1000 / 60 / 60)} hour(s) with ${Math.floor(config.defaultDuration / 1000)} second(s) per track`);
+
     const timeListened = scrobbles.reduce((acc, obj) => acc + (tracks.find(track => track.id === obj.trackId)?.duration || config.defaultDuration || 0), 0);
     const timePassed = Date.now() - new Date(0).setFullYear(new Date().getFullYear());
-    console.log(`   Total time listened: ${Math.floor(timeListened / 1000 / 60 / 60 / 24)} day(s), ${Math.floor(timeListened / 1000 / 60 / 60)} hour(s), ${Math.floor(timeListened / 1000 / 60)} minute(s), ${Math.floor(timeListened / 1000)} second(s), thats ${Math.floor((timeListened / timePassed) * 100)}% of whats passed in ${new Date().getFullYear()} so far`);
+    console.log(`   Total time listened: ${Math.floor(timeListened / 1000 / 60 / 60 / 24)} day(s), ${Math.floor(timeListened / 1000 / 60 / 60)} hour(s), ${Math.floor(timeListened / 1000 / 60)} minute(s), ${Math.floor(timeListened / 1000)} second(s) - ${((timeListened / timePassed) * 100).toFixed(1)}% of ${new Date().getFullYear()} so far`);
 
     const firstScrobble = scrobbles.reduce((acc, obj) => obj.dateScrobbled < acc.dateScrobbled ? obj : acc);
     console.log(`   First scrobble: ${new Date(firstScrobble.dateScrobbled).toLocaleString()}`);
